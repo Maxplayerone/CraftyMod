@@ -1,20 +1,21 @@
 use crate::renderer::buffer::Buffer;
+use crate::renderer::camera::Camera;
+use crate::renderer::camera::Move;
 use crate::renderer::program::ShaderProgram;
 use crate::renderer::shader::{Shader, ShaderError};
 use crate::renderer::texture::Texture;
 use crate::renderer::vertex_array::VertexArray;
 
+use std::ffi::CStr;
+use std::path::Path;
+
 extern crate cgmath;
 use cgmath::prelude::*;
 use cgmath::{perspective, Deg, Matrix4};
 
-use std::ffi::CStr;
-use std::path::Path;
-
 use crate::utils::math;
 //use crate::utils::macros;
 
-//convert literals to c strings without any runtime overhead
 macro_rules! c_str {
     ($literal:expr) => {
         CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
@@ -28,6 +29,7 @@ pub struct Renderer {
     vao: VertexArray,
     tex0: Texture,
     tex1: Texture,
+    camera: Camera,
 }
 
 const SCR_WDITH: u32 = 800;
@@ -37,9 +39,6 @@ impl Renderer {
     pub fn new() -> Result<Self, ShaderError> {
         unsafe {
             gl::Enable(gl::DEPTH_TEST);
-
-            let test = math::Vec4::new(1.0, 4.0, 2.0, -3.0);
-            println!("The test is {:?}", test);
 
             let vertex_shader = Shader::new("src/shaders/basic.vs", gl::VERTEX_SHADER)?;
             let fragment_shader = Shader::new("src/shaders/basic.frag", gl::FRAGMENT_SHADER)?;
@@ -56,33 +55,21 @@ impl Renderer {
             program.set_int(c_str!("tex0"), 0);
             program.set_int(c_str!("tex1"), 1);
 
+            let camera = Camera::new(&program);
+
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
-            
-            let camera_pos = math::Vec3::new(0.0, 0.0, 3.0);
-            let camera_front = math::Vec3::new(0.0, 0.0, -1.0);
-            let camera_up = math::Vec3::new(0.0, 1.0, 0.0);
-            let target = math::Vec3::add(&camera_pos, &camera_front);
-
-            let mut view = math::Mat4::new(1.0);                     
-            view.look_at(
-                &camera_pos,
-                &target,
-                &camera_up,
-            );          
 
             let projection: Matrix4<f32> =
-              perspective(Deg(45.0), SCR_WDITH as f32 / SCR_HEIGHT as f32, 0.1, 100.0);
-            //let mut projection = math::Mat4::new(1.0);
-            //projection.perspective(45.0, SCR_WDITH as f32 / SCR_HEIGHT as f32, 0.1, 100.0);
+                perspective(Deg(45.0), SCR_WDITH as f32 / SCR_HEIGHT as f32, 0.1, 100.0);
 
-            //uniform locations
             let model_loc = gl::GetUniformLocation(program.id, c_str!("model").as_ptr());
-            let view_loc = gl::GetUniformLocation(program.id, c_str!("view").as_ptr());
             let proj_loc = gl::GetUniformLocation(program.id, c_str!("projection").as_ptr());
             gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model.mat[0]);
-            gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view.mat[0]);
             gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, projection.as_ptr());
+
+            let mut model = math::Mat4::new(1.0);
+            model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
 
             Ok(Self {
                 program,
@@ -91,6 +78,7 @@ impl Renderer {
                 vao: vertex_array,
                 tex0: tex0,
                 tex1: tex1,
+                camera: camera,
             })
         }
     }
@@ -120,6 +108,18 @@ impl Renderer {
             self.vbo.bind();
             self.vao
                 .set_attribute(loc, num_of_components, vertex_size, offset);
+        }
+    }
+
+    pub fn process_events(&mut self, event: glfw::WindowEvent) {
+        match event {
+            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Left)
+            }
+            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Right)
+            }
+            _ => (),
         }
     }
 

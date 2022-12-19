@@ -2,7 +2,7 @@
 name = "crafty_mod"
 version = "0.1.0"
 edition = "2021"
-#6.5h
+#8.45h
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

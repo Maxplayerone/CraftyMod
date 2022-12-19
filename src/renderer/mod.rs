@@ -1,4 +1,5 @@
 mod buffer;
+mod camera;
 mod program;
 mod renderer;
 mod shader;
