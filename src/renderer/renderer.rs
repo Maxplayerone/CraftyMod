@@ -113,12 +113,10 @@ impl Renderer {
 
     pub fn process_events(&mut self, event: glfw::WindowEvent) {
         match event {
-            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Left)
-            }
-            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Right)
-            }
+            glfw::WindowEvent::Key(glfw::Key::W, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Up),
+            glfw::WindowEvent::Key(glfw::Key::S, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Down),
+            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Left),
+            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Right),
             _ => (),
         }
     }

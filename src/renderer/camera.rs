@@ -53,11 +53,24 @@ impl Camera {
             movement_speed: 0.1,
         }
     }
-
-    //math::Vec3::sub(camera_pos, math::Vec3::mul((math::Vec3::cross(camera_front, camera_up)).normalize(), camera_speed))
-    //math::Vec3::add(camera_pos, math::Vec3::mul((math::Vec3::cross(camera_front, camera_up)).normalize(), camera_speed))
     pub fn translate(&mut self, move_type: Move) {
         match move_type {
+            Move::Up => {
+                self.camera_pos = &self.camera_pos + &math::Vec3::mul(&self.camera_front, self.movement_speed);
+                self.target = &self.camera_pos + &self.camera_front;
+                self.matrix.look_at(&self.camera_pos, &self.target, &self.camera_up);
+                unsafe{
+                gl::UniformMatrix4fv(self.location, 1, gl::FALSE, &self.matrix.mat[0]);
+                }
+            },
+            Move::Down => {
+                self.camera_pos = &self.camera_pos - &math::Vec3::mul(&self.camera_front, self.movement_speed);
+                self.target = &self.camera_pos + &self.camera_front;
+                self.matrix.look_at(&self.camera_pos, &self.target, &self.camera_up);
+                unsafe{
+                gl::UniformMatrix4fv(self.location, 1, gl::FALSE, &self.matrix.mat[0]);
+                }
+            },
             Move::Left => {
                 self.camera_pos = &self.camera_pos
                     + &math::Vec3::mul(
@@ -82,8 +95,6 @@ impl Camera {
                 gl::UniformMatrix4fv(self.location, 1, gl::FALSE, &self.matrix.mat[0]);
                 }
             }
-            Move::Up => println!("Moving up"),
-            Move::Down => println!("Moving down"),
         }
     }
 }
