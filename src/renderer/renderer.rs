@@ -111,17 +111,26 @@ impl Renderer {
         }
     }
 
-    pub fn process_events(&mut self, event: glfw::WindowEvent) {
+    pub fn process_events(&mut self, event: glfw::WindowEvent, delta_time: f64) {
         match event {
-            glfw::WindowEvent::Key(glfw::Key::W, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Up),
-            glfw::WindowEvent::Key(glfw::Key::S, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Down),
-            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Left),
-            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => self.camera.translate(Move::Right),
+            glfw::WindowEvent::Key(glfw::Key::W, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Up, delta_time)
+            }
+            glfw::WindowEvent::Key(glfw::Key::S, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Down, delta_time)
+            }
+            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Left, delta_time)
+            }
+            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => {
+                self.camera.translate(Move::Right, delta_time)
+            }
+            glfw::WindowEvent::CursorPos(x, y) => self.camera.look_around(x, y),
             _ => (),
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw(&mut self) {
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -132,6 +141,7 @@ impl Renderer {
             self.tex1.bind();
             self.program.bind();
 
+            self.camera.update_camera_position();
             self.vao.bind();
             //gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
             gl::DrawArrays(gl::TRIANGLES, 0, 36);

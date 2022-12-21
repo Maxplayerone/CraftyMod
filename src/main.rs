@@ -81,10 +81,17 @@ fn main() {
 
     renderer.set_vao_attrib(0, 3, 5, 0);
     renderer.set_vao_attrib(1, 2, 5, 3);
+
+    let mut delta_time: f64 = 0.01;
+    let mut last_frame: f64 = 0.0;
     while !window.should_close() {
-        process_events(&mut window, &events, &mut renderer);
+        process_events(&mut window, &events, &mut renderer, delta_time);
 
         renderer.draw();
+
+        let current_frame: f64 = glfw::Glfw::get_time(&glfw);
+        delta_time = current_frame - last_frame;
+        last_frame = current_frame;
         window.swap_buffers();
         glfw.poll_events();
     }
@@ -94,6 +101,7 @@ fn process_events(
     _window: &mut glfw::Window,
     events: &Receiver<(f64, glfw::WindowEvent)>,
     renderer: &mut Renderer,
+    delta_time: f64,
 ) {
     for (_, event) in glfw::flush_messages(&events) {
         match event {
@@ -101,7 +109,7 @@ fn process_events(
                 gl::Viewport(0, 0, width, height)
             },
             _ => {
-                renderer.process_events(event);
+                renderer.process_events(event, delta_time);
                 ()
             }
         }

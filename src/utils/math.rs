@@ -1,5 +1,10 @@
 use std::ops::Add;
 use std::ops::Sub;
+use std::f32::consts::PI;
+
+pub fn rad(angle_degrees: f32) -> f32{
+    angle_degrees * (PI / 180.0)
+}
 
 #[derive(Debug)]
 pub struct Vec3 {
@@ -63,25 +68,6 @@ impl Vec3 {
     }
 }
 
-#[derive(Debug)]
-pub struct Vec4 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
-}
-
-impl Vec4 {
-    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Vec4 {
-        Self {
-            x: x,
-            y: y,
-            z: z,
-            w: w,
-        }
-    }
-}
-
 pub struct Mat4 {
     pub mat: [f32; 16],
 }
@@ -103,7 +89,7 @@ impl Mat4 {
     }
 
     pub fn rotate(&mut self, axis_normalized: Vec3, angle_degrees: f32) {
-        let angle_radians = angle_degrees * (3.1415 / 180.0);
+        let angle_radians = rad(angle_degrees);
         let s = angle_radians.sin();
         let c = angle_radians.cos();
         let one_minus_c = 1.0 - c;
