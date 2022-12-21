@@ -9,10 +9,6 @@ use crate::renderer::vertex_array::VertexArray;
 use std::ffi::CStr;
 use std::path::Path;
 
-extern crate cgmath;
-use cgmath::prelude::*;
-use cgmath::{perspective, Deg, Matrix4};
-
 use crate::utils::math;
 //use crate::utils::macros;
 
@@ -31,9 +27,6 @@ pub struct Renderer {
     tex1: Texture,
     camera: Camera,
 }
-
-const SCR_WDITH: u32 = 800;
-const SCR_HEIGHT: u32 = 600;
 
 impl Renderer {
     pub fn new() -> Result<Self, ShaderError> {
@@ -60,13 +53,8 @@ impl Renderer {
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
 
-            let projection: Matrix4<f32> =
-                perspective(Deg(45.0), SCR_WDITH as f32 / SCR_HEIGHT as f32, 0.1, 100.0);
-
             let model_loc = gl::GetUniformLocation(program.id, c_str!("model").as_ptr());
-            let proj_loc = gl::GetUniformLocation(program.id, c_str!("projection").as_ptr());
             gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model.mat[0]);
-            gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, projection.as_ptr());
 
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
@@ -126,6 +114,7 @@ impl Renderer {
                 self.camera.translate(Move::Right, delta_time)
             }
             glfw::WindowEvent::CursorPos(x, y) => self.camera.look_around(x, y),
+            glfw::WindowEvent::Scroll(_x, y) => self.camera.zoom(y),
             _ => (),
         }
     }

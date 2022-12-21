@@ -1,6 +1,8 @@
 use crate::utils::math;
 
 extern crate cgmath;
+use cgmath::prelude::*;
+use cgmath::{perspective, Deg, Matrix4};
 
 use crate::renderer::program::ShaderProgram;
 
@@ -20,8 +22,10 @@ pub enum Move {
 
 pub struct Camera {
     //overall
-    matrix: math::Mat4,
-    location: i32,
+    view_mat: math::Mat4,
+    view_loc: i32,
+    proj_mat: Matrix4<f32>,
+    proj_loc: i32,
 
     camera_pos: math::Vec3,
     camera_front: math::Vec3,
@@ -37,6 +41,9 @@ pub struct Camera {
     pitch: f32,
     yaw: f32,
     sens: f32,
+
+    //zoom
+    fov: f32,
 }
 
 impl Camera {
@@ -49,12 +56,22 @@ impl Camera {
         let mut view = math::Mat4::new(1.0);
         view.look_at(&camera_pos, &target, &camera_up);
 
+        let fov = 45.0;
+        let projection: Matrix4<f32> =
+                perspective(Deg(fov), 800 as f32 / 600 as f32, 0.1, 100.0);   
+
         let view_loc = gl::GetUniformLocation(program.id, c_str!("view").as_ptr());
+        let proj_loc = gl::GetUniformLocation(program.id, c_str!("projection").as_ptr());
         gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view.mat[0]);
+        gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, projection.as_ptr());
+
+      
 
         Self {
-            matrix: view,
-            location: view_loc,
+            view_mat: view,
+            view_loc,
+            proj_mat: projection,
+            proj_loc,
             camera_pos: camera_pos,
             camera_front: camera_front,
             camera_up: camera_up,
@@ -66,14 +83,16 @@ impl Camera {
                 pitch: 0.0,
                 yaw: -90.0,
                 sens: 0.1,
+                fov,
         }
     }
 
     pub fn update_camera_position(&mut self){
         self.target = &self.camera_pos + &self.camera_front;
-        self.matrix.look_at(&self.camera_pos, &self.target, &self.camera_up);
+        self.view_mat.look_at(&self.camera_pos, &self.target, &self.camera_up);
         unsafe{
-        gl::UniformMatrix4fv(self.location, 1, gl::FALSE, &self.matrix.mat[0]);
+        gl::UniformMatrix4fv(self.view_loc, 1, gl::FALSE, &self.view_mat.mat[0]);
+        gl::UniformMatrix4fv(self.proj_loc, 1, gl::FALSE, &self.proj_mat[0][0]);
         }
     }
     pub fn translate(&mut self, move_type: Move, delta_time: f64) {
@@ -140,4 +159,16 @@ impl Camera {
         dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
         self.camera_front = dir.normalize();
     } 
+
+    pub fn zoom(&mut self, scroll_value: f64){
+        self.fov -= scroll_value as f32;
+        if self.fov < 1.0 {
+            self.fov = 1.0;
+        }
+        if self.fov > 45.0 {
+            self.fov = 45.0;
+        } 
+
+        self.proj_mat = perspective(Deg(self.fov), 800 as f32 / 600 as f32, 0.1, 100.0); 
+    }
 }
