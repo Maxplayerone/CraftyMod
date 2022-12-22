@@ -10,8 +10,8 @@ use std::ffi::CStr;
 use std::path::Path;
 
 use crate::utils::math;
-//use crate::utils::macros;
 
+//convert literals to c strings without any runtime overhead
 macro_rules! c_str {
     ($literal:expr) => {
         CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
@@ -64,9 +64,9 @@ impl Renderer {
                 vbo: vertex_buffer,
                 ibo: element_buffer,
                 vao: vertex_array,
-                tex0: tex0,
-                tex1: tex1,
-                camera: camera,
+                tex0,
+                tex1,
+                camera,
             })
         }
     }
@@ -115,6 +115,11 @@ impl Renderer {
             }
             glfw::WindowEvent::CursorPos(x, y) => self.camera.look_around(x, y),
             glfw::WindowEvent::Scroll(_x, y) => self.camera.zoom(y),
+            glfw::WindowEvent::MouseButton(
+                glfw::MouseButton::Button1,
+                glfw::Action::Release,
+                _,
+            ) => self.camera.change_looking_around_state(),
             _ => (),
         }
     }
@@ -132,8 +137,8 @@ impl Renderer {
 
             self.camera.update_camera_position();
             self.vao.bind();
-            //gl::DrawElements(gl::TRIANGLES, 6, gl::UNSIGNED_INT, std::ptr::null());
-            gl::DrawArrays(gl::TRIANGLES, 0, 36);
+            gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, std::ptr::null());
+            //gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
 }

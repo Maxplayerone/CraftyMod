@@ -1,8 +1,8 @@
+use std::f32::consts::PI;
 use std::ops::Add;
 use std::ops::Sub;
-use std::f32::consts::PI;
 
-pub fn rad(angle_degrees: f32) -> f32{
+pub fn rad(angle_degrees: f32) -> f32 {
     angle_degrees * (PI / 180.0)
 }
 
@@ -39,7 +39,7 @@ impl Add for &Vec3 {
 
 impl Vec3 {
     pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
-        Self { x: x, y: y, z: z }
+        Self { x, y, z }
     }
 
     pub fn normalize(&mut self) -> Vec3 {
@@ -109,7 +109,7 @@ impl Mat4 {
 
     pub fn look_at(&mut self, pos: &Vec3, target: &Vec3, world_up: &Vec3) {
         let dir = (pos - target).normalize();
-        let right = Vec3::cross(&world_up, &dir).normalize();
+        let right = Vec3::cross(world_up, &dir).normalize();
         let up = Vec3::cross(&dir, &right).normalize();
 
         self.mat[0] = right.x;

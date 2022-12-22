@@ -35,7 +35,6 @@ pub struct Camera {
     //translation
     movement_speed: f32,
     //look around
-    first_time_flag: bool,
     last_x: f32,
     last_y: f32,
     pitch: f32,
@@ -44,6 +43,13 @@ pub struct Camera {
 
     //zoom
     fov: f32,
+
+    helper: Helper,
+}
+
+pub struct Helper {
+    first_time_looking_around_flag: bool,
+    look_around_state: bool,
 }
 
 impl Camera {
@@ -57,42 +63,43 @@ impl Camera {
         view.look_at(&camera_pos, &target, &camera_up);
 
         let fov = 45.0;
-        let projection: Matrix4<f32> =
-                perspective(Deg(fov), 800 as f32 / 600 as f32, 0.1, 100.0);   
+        let projection: Matrix4<f32> = perspective(Deg(fov), 800.0 / 600.0, 0.1, 100.0);
 
         let view_loc = gl::GetUniformLocation(program.id, c_str!("view").as_ptr());
         let proj_loc = gl::GetUniformLocation(program.id, c_str!("projection").as_ptr());
         gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view.mat[0]);
         gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, projection.as_ptr());
 
-      
-
         Self {
             view_mat: view,
             view_loc,
             proj_mat: projection,
             proj_loc,
-            camera_pos: camera_pos,
-            camera_front: camera_front,
-            camera_up: camera_up,
-            target: target,
+            camera_pos,
+            camera_front,
+            camera_up,
+            target,
             movement_speed: 10.0,
-                first_time_flag: true,
-                last_x: 400.0, //probably should somehow get the dimensions of the window and not hardcode it
-                last_y: 300.0,
-                pitch: 0.0,
-                yaw: -90.0,
-                sens: 0.1,
-                fov,
+            last_x: 400.0, //probably should somehow get the dimensions of the window and not hardcode it
+            last_y: 300.0,
+            pitch: 0.0,
+            yaw: -90.0,
+            sens: 0.1,
+            fov,
+            helper: Helper {
+                first_time_looking_around_flag: false,
+                look_around_state: false,
+            },
         }
     }
 
-    pub fn update_camera_position(&mut self){
+    pub fn update_camera_position(&mut self) {
         self.target = &self.camera_pos + &self.camera_front;
-        self.view_mat.look_at(&self.camera_pos, &self.target, &self.camera_up);
-        unsafe{
-        gl::UniformMatrix4fv(self.view_loc, 1, gl::FALSE, &self.view_mat.mat[0]);
-        gl::UniformMatrix4fv(self.proj_loc, 1, gl::FALSE, &self.proj_mat[0][0]);
+        self.view_mat
+            .look_at(&self.camera_pos, &self.target, &self.camera_up);
+        unsafe {
+            gl::UniformMatrix4fv(self.view_loc, 1, gl::FALSE, &self.view_mat.mat[0]);
+            gl::UniformMatrix4fv(self.proj_loc, 1, gl::FALSE, &self.proj_mat[0][0]);
         }
     }
     pub fn translate(&mut self, move_type: Move, delta_time: f64) {
@@ -114,7 +121,7 @@ impl Camera {
                         &(math::Vec3::cross(&self.camera_front, &self.camera_up).normalize()),
                         self.movement_speed,
                     );
-            },
+            }
             Move::Right => {
                 self.camera_pos = &self.camera_pos
                     + &math::Vec3::mul(
@@ -127,48 +134,55 @@ impl Camera {
         self.movement_speed = movement_speed_cached;
     }
 
-    pub fn look_around(&mut self, x: f64, y: f64){
+    pub fn change_looking_around_state(&mut self) {
+        self.helper.look_around_state = !self.helper.look_around_state;
+    }
 
-        if self.first_time_flag{
+    pub fn look_around(&mut self, x: f64, y: f64) {
+        if self.helper.look_around_state {
+            if self.helper.first_time_looking_around_flag {
+                self.last_x = x as f32;
+                self.last_y = y as f32;
+                self.helper.first_time_looking_around_flag = false;
+            }
+            let mut x_offset = self.last_x - x as f32;
+            let mut y_offset = y as f32 - self.last_y;
+
             self.last_x = x as f32;
             self.last_y = y as f32;
-            self.first_time_flag = false;
+
+            x_offset *= self.sens;
+            y_offset *= self.sens;
+
+            self.yaw += x_offset;
+            self.pitch += y_offset;
+
+            if self.pitch > 89.0 {
+                self.pitch = 89.0;
+            }
+            if self.pitch < -89.0 {
+                self.pitch = -89.0;
+            }
+
+            let mut dir = math::Vec3::new(0.0, 0.0, 0.0);
+            dir.x = (math::rad(self.yaw)).cos() * (math::rad(self.pitch)).cos();
+            dir.y = (math::rad(self.pitch)).sin();
+            dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
+            self.camera_front = dir.normalize();
+        }else{
+            self.helper.first_time_looking_around_flag = true;
         }
-        let mut x_offset = self.last_x - x as f32;
-        let mut y_offset = y as f32 - self.last_y;
-        
-        self.last_x = x as f32;
-        self.last_y = y as f32;
+    }
 
-        x_offset *= self.sens;
-        y_offset *= self.sens;
-
-        self.yaw += x_offset;
-        self.pitch += y_offset;
-
-        if self.pitch > 89.0{
-            self.pitch = 89.0;
-        }
-        if self.pitch < -89.0{
-            self.pitch = -89.0;
-        }
-        
-        let mut dir = math::Vec3::new(0.0, 0.0, 0.0);
-        dir.x = (math::rad(self.yaw)).cos() * (math::rad(self.pitch)).cos();
-        dir.y = (math::rad(self.pitch)).sin();
-        dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
-        self.camera_front = dir.normalize();
-    } 
-
-    pub fn zoom(&mut self, scroll_value: f64){
+    pub fn zoom(&mut self, scroll_value: f64) {
         self.fov -= scroll_value as f32;
         if self.fov < 1.0 {
             self.fov = 1.0;
         }
         if self.fov > 45.0 {
             self.fov = 45.0;
-        } 
+        }
 
-        self.proj_mat = perspective(Deg(self.fov), 800 as f32 / 600 as f32, 0.1, 100.0); 
+        self.proj_mat = perspective(Deg(self.fov), 800.0 / 600.0, 0.1, 100.0);
     }
 }

@@ -24,60 +24,53 @@ fn main() {
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
     #[rustfmt::skip]
-    let vertices: [f32; 180] = [
-        -0.5, -0.5, -0.5,  0.0, 0.0,
-         0.5, -0.5, -0.5,  1.0, 0.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-        -0.5,  0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 0.0,
+    //X-Y-Z
+    let vertices: [f32; 120] = [
+        -0.5, -0.5, -0.5,  0.0, 0.0, //left-bottom-back
+         0.5, -0.5, -0.5,  1.0, 0.0, //right-bottom-back
+         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
+        -0.5,  0.5, -0.5,  0.0, 1.0, //left-top-back
 
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 1.0,
-         0.5,  0.5,  0.5,  1.0, 1.0,
-        -0.5,  0.5,  0.5,  0.0, 1.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
+        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
+         0.5, -0.5,  0.5,  1.0, 0.0, //right-bottom-front
+         0.5,  0.5,  0.5,  1.0, 1.0, //right-top-front
+        -0.5,  0.5,  0.5,  0.0, 1.0, //left-top-front
 
-        -0.5,  0.5,  0.5,  1.0, 0.0,
-        -0.5,  0.5, -0.5,  1.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-        -0.5,  0.5,  0.5,  1.0, 0.0,
+        -0.5,  0.5,  0.5,  1.0, 0.0, //left-top-front
+        -0.5,  0.5, -0.5,  1.0, 1.0, //left-top-back
+        -0.5, -0.5, -0.5,  0.0, 1.0, //left-bottom-back
+        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
 
-         0.5,  0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5,  0.5,  0.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
+         0.5,  0.5,  0.5,  1.0, 0.0, //right-top-front
+         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
+         0.5, -0.5, -0.5,  0.0, 1.0, //right-bottom-back
+         0.5, -0.5,  0.5,  0.0, 0.0, //right-bottom-front
 
-        -0.5, -0.5, -0.5,  0.0, 1.0,
-         0.5, -0.5, -0.5,  1.0, 1.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-         0.5, -0.5,  0.5,  1.0, 0.0,
-        -0.5, -0.5,  0.5,  0.0, 0.0,
-        -0.5, -0.5, -0.5,  0.0, 1.0,
+        -0.5, -0.5, -0.5,  0.0, 1.0, //left-bottom-back
+         0.5, -0.5, -0.5,  1.0, 1.0, //right-bottom-back
+         0.5, -0.5,  0.5,  1.0, 0.0, //right-bottom-front
+        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
 
-        -0.5,  0.5, -0.5,  0.0, 1.0,
-         0.5,  0.5, -0.5,  1.0, 1.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
-         0.5,  0.5,  0.5,  1.0, 0.0,
-        -0.5,  0.5,  0.5,  0.0, 0.0,
-        -0.5,  0.5, -0.5,  0.0, 1.0
+        -0.5,  0.5, -0.5,  0.0, 1.0, //left-top-back
+         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
+         0.5,  0.5,  0.5,  1.0, 0.0, //right-top-front
+        -0.5,  0.5,  0.5,  0.0, 0.0, //left-top-front
    ];
 
-    /*
+    
     #[rustfmt::skip]
-    let indices: [u32; 6] = [
-        2, 0, 1,
-        2, 3, 1,
+    let indices: [u32; 36] = [
+        0, 1, 2, 2, 3, 0,
+        4, 5, 6, 6, 7, 4,
+        8, 9, 10, 10, 11, 8,
+        12, 13, 14, 14, 15, 12,
+        16, 17, 18, 18, 19, 16, 
+        20, 21, 22, 22, 23, 20,
     ];
-    */
+    
     let mut renderer = Renderer::new().expect("Cannot create renderer");
     renderer.upload_vbo_data(&vertices);
-    //renderer.upload_ibo_data(&indices);
+    renderer.upload_ibo_data(&indices);
 
     renderer.set_vao_attrib(0, 3, 5, 0);
     renderer.set_vao_attrib(1, 2, 5, 3);
@@ -103,14 +96,13 @@ fn process_events(
     renderer: &mut Renderer,
     delta_time: f64,
 ) {
-    for (_, event) in glfw::flush_messages(&events) {
+    for (_, event) in glfw::flush_messages(events) {
         match event {
             glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
                 gl::Viewport(0, 0, width, height)
             },
             _ => {
                 renderer.process_events(event, delta_time);
-                ()
             }
         }
     }
