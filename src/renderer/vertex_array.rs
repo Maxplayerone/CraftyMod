@@ -1,6 +1,11 @@
 use gl::types::*;
 use std::os::raw::c_void;
 
+#[derive(PartialEq, Eq)]
+pub enum VertexArrayConfiguration {
+    XyzAndTexCoords,
+}
+
 pub struct VertexArray {
     pub id: GLuint,
 }
@@ -20,26 +25,34 @@ impl VertexArray {
         Self { id }
     }
 
-    pub unsafe fn set_attribute(
-        &self,
-        attrib_pos: u32,
-        num_of_components: i32,
-        vertex_size: usize,
-        offset: usize,
-    ) {
-        self.bind();
-        gl::VertexAttribPointer(
-            attrib_pos,
-            num_of_components,
-            gl::FLOAT,
-            gl::FALSE,
-            (vertex_size * std::mem::size_of::<GLfloat>()) as GLint,
-            (offset * std::mem::size_of::<GLfloat>()) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(attrib_pos);
-    }
-
     pub unsafe fn bind(&self) {
         gl::BindVertexArray(self.id);
+    }
+
+    pub fn setup_vao(&self, configuration: VertexArrayConfiguration) {
+        unsafe {
+            if configuration == VertexArrayConfiguration::XyzAndTexCoords {
+                self.bind();
+                gl::VertexAttribPointer(
+                    0,
+                    3,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (5 * std::mem::size_of::<GLfloat>()) as GLint,
+                    (0 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                );
+                gl::EnableVertexAttribArray(0);
+
+                gl::VertexAttribPointer(
+                    1,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (5 * std::mem::size_of::<GLfloat>()) as GLint,
+                    (3 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                );
+                gl::EnableVertexAttribArray(1);
+            }
+        }
     }
 }

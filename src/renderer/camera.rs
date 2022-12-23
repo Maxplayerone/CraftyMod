@@ -49,7 +49,6 @@ pub struct Camera {
 
 pub struct Helper {
     first_time_looking_around_flag: bool,
-    look_around_state: bool,
 }
 
 impl Camera {
@@ -88,7 +87,6 @@ impl Camera {
             fov,
             helper: Helper {
                 first_time_looking_around_flag: false,
-                look_around_state: false,
             },
         }
     }
@@ -134,44 +132,36 @@ impl Camera {
         self.movement_speed = movement_speed_cached;
     }
 
-    pub fn change_looking_around_state(&mut self) {
-        self.helper.look_around_state = !self.helper.look_around_state;
-    }
-
     pub fn look_around(&mut self, x: f64, y: f64) {
-        if self.helper.look_around_state {
-            if self.helper.first_time_looking_around_flag {
-                self.last_x = x as f32;
-                self.last_y = y as f32;
-                self.helper.first_time_looking_around_flag = false;
-            }
-            let mut x_offset = self.last_x - x as f32;
-            let mut y_offset = y as f32 - self.last_y;
-
+        if self.helper.first_time_looking_around_flag {
             self.last_x = x as f32;
             self.last_y = y as f32;
-
-            x_offset *= self.sens;
-            y_offset *= self.sens;
-
-            self.yaw += x_offset;
-            self.pitch += y_offset;
-
-            if self.pitch > 89.0 {
-                self.pitch = 89.0;
-            }
-            if self.pitch < -89.0 {
-                self.pitch = -89.0;
-            }
-
-            let mut dir = math::Vec3::new(0.0, 0.0, 0.0);
-            dir.x = (math::rad(self.yaw)).cos() * (math::rad(self.pitch)).cos();
-            dir.y = (math::rad(self.pitch)).sin();
-            dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
-            self.camera_front = dir.normalize();
-        }else{
-            self.helper.first_time_looking_around_flag = true;
+            self.helper.first_time_looking_around_flag = false;
         }
+        let mut x_offset = self.last_x - x as f32;
+        let mut y_offset = y as f32 - self.last_y;
+
+        self.last_x = x as f32;
+        self.last_y = y as f32;
+
+        x_offset *= self.sens;
+        y_offset *= self.sens;
+
+        self.yaw += x_offset;
+        self.pitch += y_offset;
+
+        if self.pitch > 89.0 {
+            self.pitch = 89.0;
+        }
+        if self.pitch < -89.0 {
+            self.pitch = -89.0;
+        }
+
+        let mut dir = math::Vec3::new(0.0, 0.0, 0.0);
+        dir.x = (math::rad(self.yaw)).cos() * (math::rad(self.pitch)).cos();
+        dir.y = (math::rad(self.pitch)).sin();
+        dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
+        self.camera_front = dir.normalize();
     }
 
     pub fn zoom(&mut self, scroll_value: f64) {

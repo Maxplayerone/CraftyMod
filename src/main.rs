@@ -7,6 +7,7 @@ extern crate gl;
 mod renderer;
 mod utils;
 use crate::renderer::Renderer;
+use crate::utils::math;
 
 fn main() {
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
@@ -23,61 +24,15 @@ fn main() {
     window.set_all_polling(true);
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    #[rustfmt::skip]
-    //X-Y-Z
-    let vertices: [f32; 120] = [
-        -0.5, -0.5, -0.5,  0.0, 0.0, //left-bottom-back
-         0.5, -0.5, -0.5,  1.0, 0.0, //right-bottom-back
-         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
-        -0.5,  0.5, -0.5,  0.0, 1.0, //left-top-back
-
-        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
-         0.5, -0.5,  0.5,  1.0, 0.0, //right-bottom-front
-         0.5,  0.5,  0.5,  1.0, 1.0, //right-top-front
-        -0.5,  0.5,  0.5,  0.0, 1.0, //left-top-front
-
-        -0.5,  0.5,  0.5,  1.0, 0.0, //left-top-front
-        -0.5,  0.5, -0.5,  1.0, 1.0, //left-top-back
-        -0.5, -0.5, -0.5,  0.0, 1.0, //left-bottom-back
-        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
-
-         0.5,  0.5,  0.5,  1.0, 0.0, //right-top-front
-         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
-         0.5, -0.5, -0.5,  0.0, 1.0, //right-bottom-back
-         0.5, -0.5,  0.5,  0.0, 0.0, //right-bottom-front
-
-        -0.5, -0.5, -0.5,  0.0, 1.0, //left-bottom-back
-         0.5, -0.5, -0.5,  1.0, 1.0, //right-bottom-back
-         0.5, -0.5,  0.5,  1.0, 0.0, //right-bottom-front
-        -0.5, -0.5,  0.5,  0.0, 0.0, //left-bottom-front
-
-        -0.5,  0.5, -0.5,  0.0, 1.0, //left-top-back
-         0.5,  0.5, -0.5,  1.0, 1.0, //right-top-back
-         0.5,  0.5,  0.5,  1.0, 0.0, //right-top-front
-        -0.5,  0.5,  0.5,  0.0, 0.0, //left-top-front
-   ];
-
-    
-    #[rustfmt::skip]
-    let indices: [u32; 36] = [
-        0, 1, 2, 2, 3, 0,
-        4, 5, 6, 6, 7, 4,
-        8, 9, 10, 10, 11, 8,
-        12, 13, 14, 14, 15, 12,
-        16, 17, 18, 18, 19, 16, 
-        20, 21, 22, 22, 23, 20,
-    ];
-    
     let mut renderer = Renderer::new().expect("Cannot create renderer");
-    renderer.upload_vbo_data(&vertices);
-    renderer.upload_ibo_data(&indices);
-
-    renderer.set_vao_attrib(0, 3, 5, 0);
-    renderer.set_vao_attrib(1, 2, 5, 3);
-
+    renderer.load_cubes(
+        math::Vec3::new(-2.0, -2.0, -2.0),
+        math::Vec3::new(3.0, 3.0, 3.0),
+    );
     let mut delta_time: f64 = 0.01;
     let mut last_frame: f64 = 0.0;
     while !window.should_close() {
+        renderer.process_input(&window, delta_time);
         process_events(&mut window, &events, &mut renderer, delta_time);
 
         renderer.draw();

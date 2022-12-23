@@ -5,6 +5,7 @@ use crate::renderer::program::ShaderProgram;
 use crate::renderer::shader::{Shader, ShaderError};
 use crate::renderer::texture::Texture;
 use crate::renderer::vertex_array::VertexArray;
+use crate::renderer::vertex_array::VertexArrayConfiguration;
 
 use std::ffi::CStr;
 use std::path::Path;
@@ -23,9 +24,10 @@ pub struct Renderer {
     vbo: Buffer,
     ibo: Buffer,
     vao: VertexArray,
-    tex0: Texture,
-    tex1: Texture,
+    tex: Texture,
     camera: Camera,
+    cube_count: i32,
+    cube_size: f32,
 }
 
 impl Renderer {
@@ -42,11 +44,9 @@ impl Renderer {
 
             let vertex_array = VertexArray::new();
 
-            let tex0 = Texture::new(Path::new("src/resources/container.jpg"));
-            let tex1 = Texture::new(Path::new("src/resources/awesomeface.png"));
+            let tex = Texture::new(Path::new("src/resources/test_grass.png"));
 
             program.set_int(c_str!("tex0"), 0);
-            program.set_int(c_str!("tex1"), 1);
 
             let camera = Camera::new(&program);
 
@@ -64,9 +64,10 @@ impl Renderer {
                 vbo: vertex_buffer,
                 ibo: element_buffer,
                 vao: vertex_array,
-                tex0,
-                tex1,
+                tex,
                 camera,
+                cube_count: 0,
+                cube_size: 1.0,
             })
         }
     }
@@ -84,44 +85,237 @@ impl Renderer {
         }
     }
 
-    pub fn set_vao_attrib(
-        &self,
-        loc: u32,
-        num_of_components: i32,
-        vertex_size: usize,
-        offset: usize,
-    ) {
-        unsafe {
-            self.vao.bind();
-            self.vbo.bind();
-            self.vao
-                .set_attribute(loc, num_of_components, vertex_size, offset);
+    pub fn process_input(&mut self, window: &glfw::Window, delta_time: f64) {
+        if glfw::Window::get_key(window, glfw::Key::W) == glfw::Action::Press {
+            self.camera.translate(Move::Up, delta_time);
+        }
+        if glfw::Window::get_key(window, glfw::Key::S) == glfw::Action::Press {
+            self.camera.translate(Move::Down, delta_time);
+        }
+        if glfw::Window::get_key(window, glfw::Key::A) == glfw::Action::Press {
+            self.camera.translate(Move::Left, delta_time);
+        }
+        if glfw::Window::get_key(window, glfw::Key::D) == glfw::Action::Press {
+            self.camera.translate(Move::Right, delta_time);
         }
     }
 
     pub fn process_events(&mut self, event: glfw::WindowEvent, delta_time: f64) {
         match event {
-            glfw::WindowEvent::Key(glfw::Key::W, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Up, delta_time)
-            }
-            glfw::WindowEvent::Key(glfw::Key::S, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Down, delta_time)
-            }
-            glfw::WindowEvent::Key(glfw::Key::A, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Left, delta_time)
-            }
-            glfw::WindowEvent::Key(glfw::Key::D, _, glfw::Action::Repeat, _) => {
-                self.camera.translate(Move::Right, delta_time)
-            }
             glfw::WindowEvent::CursorPos(x, y) => self.camera.look_around(x, y),
             glfw::WindowEvent::Scroll(_x, y) => self.camera.zoom(y),
-            glfw::WindowEvent::MouseButton(
-                glfw::MouseButton::Button1,
-                glfw::Action::Release,
-                _,
-            ) => self.camera.change_looking_around_state(),
             _ => (),
         }
+    }
+
+    pub fn load_cubes(&mut self, starting_pos: math::Vec3, dimensions: math::Vec3) {
+        let width = dimensions.x as i32;
+        let height = dimensions.y as i32;
+        let depth = dimensions.z as i32;
+        self.cube_count = width * height * depth;
+
+        let mut offset_x = 0.0;
+        let mut offset_y = 0.0;
+        let mut offset_z = 0.0;
+        let mut i = 0;
+
+        let mut vertices: Vec<f32> = Vec::with_capacity((120 * self.cube_count) as usize);
+        let size = self.cube_size;
+        for _ in 0..self.cube_count {
+            println!("offset x {}", offset_x);
+            println!("offset y {}", offset_y);
+            println!("offset z {}", offset_z);
+            println!("----------------------------");
+            //back-face
+            vertices.push(starting_pos.x + offset_x); //left-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + offset_x); //left-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            //front face
+            vertices.push(starting_pos.x + offset_x); //left-bottom-front
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-front
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-top-front
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + offset_x); //left-top-front
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            //left face
+            vertices.push(starting_pos.x + offset_x); //left-top-front
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + offset_x); //left-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + offset_x); //left-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + offset_x); //left-bottom-front
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+            //right face
+            vertices.push(starting_pos.x + size + offset_x); //right-top-front
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-front
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+            //bottom face
+            vertices.push(starting_pos.x + offset_x); //left-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-back
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-bottom-front
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + offset_x); //left-bottom-fronts
+            vertices.push(starting_pos.y + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+            //top face
+            vertices.push(starting_pos.x + offset_x); //left-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(0.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-top-back
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + offset_z);
+            vertices.push(1.0);
+            vertices.push(1.0);
+            vertices.push(starting_pos.x + size + offset_x); //right-top-front
+            vertices.push(starting_pos.y + size + offset_y);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(1.0);
+            vertices.push(0.0);
+            vertices.push(starting_pos.x + offset_x); //left-top-front
+            vertices.push(starting_pos.y + size);
+            vertices.push(starting_pos.z + size + offset_z);
+            vertices.push(0.0);
+            vertices.push(0.0);
+
+            i += 1;
+            offset_x += 1.0;
+            if i % width == 0 {
+                offset_x = 0.0;
+                offset_z += 1.0;
+            }
+            /*
+            if i % width * height == 0 {
+                offset_x = 0.0;
+                offset_y = 0.0;
+                offset_y += 1.0;
+            }
+            */
+        }
+
+        let mut indices: Vec<u32> = Vec::with_capacity((36 * self.cube_count) as usize);
+        let mut offset = 0;
+        for _ in 0..self.cube_count {
+            indices.push(0 + offset);
+            indices.push(1 + offset);
+            indices.push(2 + offset);
+            indices.push(2 + offset);
+            indices.push(3 + offset);
+            indices.push(0 + offset);
+            indices.push(4 + offset);
+            indices.push(5 + offset);
+            indices.push(6 + offset);
+            indices.push(6 + offset);
+            indices.push(7 + offset);
+            indices.push(4 + offset);
+            indices.push(8 + offset);
+            indices.push(9 + offset);
+            indices.push(10 + offset);
+            indices.push(10 + offset);
+            indices.push(11 + offset);
+            indices.push(8 + offset);
+            indices.push(12 + offset);
+            indices.push(13 + offset);
+            indices.push(14 + offset);
+            indices.push(14 + offset);
+            indices.push(15 + offset);
+            indices.push(12 + offset);
+            indices.push(16 + offset);
+            indices.push(17 + offset);
+            indices.push(18 + offset);
+            indices.push(18 + offset);
+            indices.push(19 + offset);
+            indices.push(16 + offset);
+            indices.push(20 + offset);
+            indices.push(21 + offset);
+            indices.push(22 + offset);
+            indices.push(22 + offset);
+            indices.push(23 + offset);
+            indices.push(20 + offset);
+
+            offset += 24;
+        }
+
+        self.upload_vbo_data(&vertices);
+        self.upload_ibo_data(&indices);
+
+        self.vao
+            .setup_vao(VertexArrayConfiguration::XyzAndTexCoords);
     }
 
     pub fn draw(&mut self) {
@@ -130,14 +324,17 @@ impl Renderer {
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             gl::ActiveTexture(gl::TEXTURE0);
-            self.tex0.bind();
-            gl::ActiveTexture(gl::TEXTURE1);
-            self.tex1.bind();
+            self.tex.bind();
             self.program.bind();
 
             self.camera.update_camera_position();
             self.vao.bind();
-            gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_INT, std::ptr::null());
+            gl::DrawElements(
+                gl::TRIANGLES,
+                36 * self.cube_count,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
+            );
             //gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
