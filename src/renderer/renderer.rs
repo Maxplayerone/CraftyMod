@@ -12,6 +12,12 @@ use std::path::Path;
 
 use crate::utils::math;
 
+use gl::types::*;
+use std::os::raw::c_void;
+
+use cgmath::prelude::*;
+use cgmath::{perspective, Deg, Matrix4, Point3, Vector3};
+
 //convert literals to c strings without any runtime overhead
 macro_rules! c_str {
     ($literal:expr) => {
@@ -28,6 +34,10 @@ pub struct Renderer {
     camera: Camera,
     cube_count: i32,
     cube_size: f32,
+
+    program2: ShaderProgram,
+    vbo2: Buffer,
+    vao2: VertexArray,
 }
 
 impl Renderer {
@@ -48,7 +58,11 @@ impl Renderer {
 
             program.set_int(c_str!("tex0"), 0);
 
-            let camera = Camera::new(&program);
+            //let camera = Camera::new(&program);
+            let camera = Camera {
+                Position: Point3::new(0.0, 0.0, 3.0),
+                ..Camera::default()
+            };
 
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
@@ -59,6 +73,12 @@ impl Renderer {
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
 
+            let vs2 = Shader::new("src/shaders/crosshair.vs", gl::VERTEX_SHADER)?;
+            let fs2 = Shader::new("src/shaders/crosshair.frag", gl::FRAGMENT_SHADER)?;
+            let program2 = ShaderProgram::new(&[vs2, fs2])?;
+            let vbo2 = Buffer::new(gl::ARRAY_BUFFER);
+            let vao2 = VertexArray::new();
+
             Ok(Self {
                 program,
                 vbo: vertex_buffer,
@@ -68,13 +88,17 @@ impl Renderer {
                 camera,
                 cube_count: 0,
                 cube_size: 1.0,
+
+                program2,
+                vbo2,
+                vao2,
             })
         }
     }
 
-    pub fn upload_vbo_data(&self, data: &[f32]) {
+    pub fn upload_vbo_data(&self, vbo: &Buffer, data: &[f32]) {
         unsafe {
-            self.vbo.set_data(data, gl::STATIC_DRAW);
+            vbo.set_data(data, gl::STATIC_DRAW);
         }
     }
 
@@ -87,25 +111,32 @@ impl Renderer {
 
     pub fn process_input(&mut self, window: &glfw::Window, delta_time: f64) {
         if glfw::Window::get_key(window, glfw::Key::W) == glfw::Action::Press {
-            self.camera.translate(Move::Up, delta_time);
+            self.camera.translate(Move::Up, delta_time as f32);
         }
         if glfw::Window::get_key(window, glfw::Key::S) == glfw::Action::Press {
-            self.camera.translate(Move::Down, delta_time);
+            self.camera.translate(Move::Down, delta_time as f32);
         }
         if glfw::Window::get_key(window, glfw::Key::A) == glfw::Action::Press {
-            self.camera.translate(Move::Left, delta_time);
+            self.camera.translate(Move::Left, delta_time as f32);
         }
         if glfw::Window::get_key(window, glfw::Key::D) == glfw::Action::Press {
-            self.camera.translate(Move::Right, delta_time);
+            self.camera.translate(Move::Right, delta_time as f32);
         }
     }
 
     pub fn process_events(&mut self, event: glfw::WindowEvent, delta_time: f64) {
         match event {
             glfw::WindowEvent::CursorPos(x, y) => self.camera.look_around(x, y),
-            glfw::WindowEvent::Scroll(_x, y) => self.camera.zoom(y),
+            glfw::WindowEvent::Scroll(_x, y) => self.camera.zoom(y as f32),
             _ => (),
         }
+    }
+
+    pub fn load_crosshair(&self) {
+        let vertices: [f32; 5] = [0.0, 0.0, 1.0, 0.0, 0.0];
+
+        self.upload_vbo_data(&self.vbo2, &vertices);
+        self.vao2.setup_vao(VertexArrayConfiguration::XyAndColour);
     }
 
     pub fn load_cubes(&mut self, starting_pos: math::Vec3, dimensions: math::Vec3) {
@@ -311,23 +342,33 @@ impl Renderer {
             offset += 24;
         }
 
-        self.upload_vbo_data(&vertices);
+        self.upload_vbo_data(&self.vbo, &vertices);
         self.upload_ibo_data(&indices);
 
         self.vao
             .setup_vao(VertexArrayConfiguration::XyzAndTexCoords);
     }
 
-    pub fn draw(&mut self) {
+    pub fn clear_screen(&mut self) {
         unsafe {
             gl::ClearColor(0.2, 0.3, 0.3, 1.0);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+        }
+    }
 
+    pub fn draw_cubes(&mut self) {
+        unsafe {
             gl::ActiveTexture(gl::TEXTURE0);
             self.tex.bind();
             self.program.bind();
 
-            self.camera.update_camera_position();
+            let projection: Matrix4<f32> = perspective(Deg(self.camera.Zoom), (800.0 / 600.0) as f32, 0.1, 100.0);
+            self.program.setMat4(c_str!("projection"), &projection);
+
+            // camera/view transformation
+            let view = self.camera.GetViewMatrix();
+            self.program.setMat4(c_str!("view"), &view);
+
             self.vao.bind();
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -335,7 +376,16 @@ impl Renderer {
                 gl::UNSIGNED_INT,
                 std::ptr::null(),
             );
-            //gl::DrawArrays(gl::TRIANGLES, 0, 36);
+        }
+    }
+
+    pub fn draw_crosshair(&mut self) {
+        unsafe {
+            gl::PointSize(10.0);
+            self.program2.bind();
+            self.vao2.bind();
+            self.vbo2.bind();
+            gl::DrawArrays(gl::POINTS, 0, 1);
         }
     }
 }

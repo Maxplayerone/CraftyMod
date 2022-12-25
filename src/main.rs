@@ -22,20 +22,27 @@ fn main() {
 
     window.make_current();
     window.set_all_polling(true);
+    window.set_cursor_mode(glfw::CursorMode::Disabled);
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
     let mut renderer = Renderer::new().expect("Cannot create renderer");
+
     renderer.load_cubes(
         math::Vec3::new(-2.0, -2.0, -2.0),
         math::Vec3::new(3.0, 3.0, 3.0),
     );
+
+    renderer.load_crosshair();
+
     let mut delta_time: f64 = 0.01;
     let mut last_frame: f64 = 0.0;
     while !window.should_close() {
-        renderer.process_input(&window, delta_time);
-        process_events(&mut window, &events, &mut renderer, delta_time);
+        process_input(&mut window, &mut renderer, delta_time);
+        process_events(&events, &mut renderer, delta_time);
 
-        renderer.draw();
+        renderer.clear_screen();
+        //renderer.draw_crosshair();
+        renderer.draw_cubes();
 
         let current_frame: f64 = glfw::Glfw::get_time(&glfw);
         delta_time = current_frame - last_frame;
@@ -45,8 +52,15 @@ fn main() {
     }
 }
 
+fn process_input(window: &mut glfw::Window, renderer: &mut Renderer, delta_time: f64) {
+    if window.get_key(glfw::Key::Escape) == glfw::Action::Press {
+        window.set_should_close(true)
+    } else {
+        renderer.process_input(&window, delta_time);
+    }
+}
+
 fn process_events(
-    _window: &mut glfw::Window,
     events: &Receiver<(f64, glfw::WindowEvent)>,
     renderer: &mut Renderer,
     delta_time: f64,

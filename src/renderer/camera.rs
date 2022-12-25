@@ -1,178 +1,159 @@
-use crate::utils::math;
+#![allow(non_camel_case_types)]
+#![allow(non_snake_case)]
 
-extern crate cgmath;
+use cgmath;
 use cgmath::prelude::*;
-use cgmath::{perspective, Deg, Matrix4};
+use cgmath::vec3;
 
-use crate::renderer::program::ShaderProgram;
+type Point3 = cgmath::Point3<f32>;
+type Vector3 = cgmath::Vector3<f32>;
+type Matrix4 = cgmath::Matrix4<f32>;
 
-use std::ffi::CStr;
-macro_rules! c_str {
-    ($literal:expr) => {
-        CStr::from_bytes_with_nul_unchecked(concat!($literal, "\0").as_bytes())
-    };
+// Defines several possible options for camera movement. Used as abstraction to stay away from window-system specific input methods
+#[derive(PartialEq)]
+pub enum Camera_Movement {
+    FORWARD,
+    BACKWARD,
+    LEFT,
+    RIGHT,
 }
-
+#[derive(PartialEq)]
 pub enum Move {
-    Left,
-    Right,
     Up,
     Down,
+    Left,
+    Right,
 }
+use self::Camera_Movement::*;
+
+// Default camera values
+const YAW: f32 = -90.0;
+const PITCH: f32 = 0.0;
+const SPEED: f32 = 10.0;
+const SENSITIVTY: f32 = 0.1;
+const ZOOM: f32 = 45.0;
 
 pub struct Camera {
-    //overall
-    view_mat: math::Mat4,
-    view_loc: i32,
-    proj_mat: Matrix4<f32>,
-    proj_loc: i32,
+    // Camera Attributes
+    pub Position: Point3,
+    pub Front: Vector3,
+    pub Up: Vector3,
+    pub Right: Vector3,
+    pub WorldUp: Vector3,
+    // Euler Angles
+    pub Yaw: f32,
+    pub Pitch: f32,
+    // Camera options
+    pub MovementSpeed: f32,
+    pub MouseSensitivity: f32,
+    pub Zoom: f32,
 
-    camera_pos: math::Vec3,
-    camera_front: math::Vec3,
-    camera_up: math::Vec3,
-    target: math::Vec3,
-
-    //translation
-    movement_speed: f32,
-    //look around
-    last_x: f32,
-    last_y: f32,
-    pitch: f32,
-    yaw: f32,
-    sens: f32,
-
-    //zoom
-    fov: f32,
-
-    helper: Helper,
+    pub first_mouse_movement: bool,
+    pub last_x: f32,
+    pub last_y: f32,
 }
 
-pub struct Helper {
-    first_time_looking_around_flag: bool,
+impl Default for Camera {
+    fn default() -> Camera {
+        let mut camera = Camera {
+            Position: Point3::new(0.0, 0.0, 0.0),
+            Front: vec3(0.0, 0.0, -1.0),
+            Up: Vector3::zero(),    // initialized later
+            Right: Vector3::zero(), // initialized later
+            WorldUp: Vector3::unit_y(),
+            Yaw: YAW,
+            Pitch: PITCH,
+            MovementSpeed: SPEED,
+            MouseSensitivity: SENSITIVTY,
+            Zoom: ZOOM,
+            first_mouse_movement: true,
+            last_x: 400.0,
+            last_y: 300.0,
+        };
+        camera.updateCameraVectors();
+        camera
+    }
 }
 
 impl Camera {
-    pub unsafe fn new(program: &ShaderProgram) -> Self {
-        let camera_pos = math::Vec3::new(0.0, 0.0, 3.0);
-        let camera_front = math::Vec3::new(0.0, 0.0, -1.0);
-        let camera_up = math::Vec3::new(0.0, 1.0, 0.0);
-        let target = &camera_pos + &camera_front;
-
-        let mut view = math::Mat4::new(1.0);
-        view.look_at(&camera_pos, &target, &camera_up);
-
-        let fov = 45.0;
-        let projection: Matrix4<f32> = perspective(Deg(fov), 800.0 / 600.0, 0.1, 100.0);
-
-        let view_loc = gl::GetUniformLocation(program.id, c_str!("view").as_ptr());
-        let proj_loc = gl::GetUniformLocation(program.id, c_str!("projection").as_ptr());
-        gl::UniformMatrix4fv(view_loc, 1, gl::FALSE, &view.mat[0]);
-        gl::UniformMatrix4fv(proj_loc, 1, gl::FALSE, projection.as_ptr());
-
-        Self {
-            view_mat: view,
-            view_loc,
-            proj_mat: projection,
-            proj_loc,
-            camera_pos,
-            camera_front,
-            camera_up,
-            target,
-            movement_speed: 10.0,
-            last_x: 400.0, //probably should somehow get the dimensions of the window and not hardcode it
-            last_y: 300.0,
-            pitch: 0.0,
-            yaw: -90.0,
-            sens: 0.1,
-            fov,
-            helper: Helper {
-                first_time_looking_around_flag: false,
-            },
-        }
+    /// Returns the view matrix calculated using Eular Angles and the LookAt Matrix
+    pub fn GetViewMatrix(&self) -> Matrix4 {
+        Matrix4::look_at(self.Position, self.Position + self.Front, self.Up)
     }
 
-    pub fn update_camera_position(&mut self) {
-        self.target = &self.camera_pos + &self.camera_front;
-        self.view_mat
-            .look_at(&self.camera_pos, &self.target, &self.camera_up);
-        unsafe {
-            gl::UniformMatrix4fv(self.view_loc, 1, gl::FALSE, &self.view_mat.mat[0]);
-            gl::UniformMatrix4fv(self.proj_loc, 1, gl::FALSE, &self.proj_mat[0][0]);
+    /// Processes input received from any keyboard-like input system. Accepts input parameter in the form of camera defined ENUM (to abstract it from windowing systems)
+    pub fn translate(&mut self, camera_move: Move, deltaTime: f32) {
+        let velocity = self.MovementSpeed * deltaTime;
+        if camera_move == Move::Up {
+            self.Position += self.Front * velocity;
         }
-    }
-    pub fn translate(&mut self, move_type: Move, delta_time: f64) {
-        let movement_speed_cached = self.movement_speed;
-        self.movement_speed *= delta_time as f32;
-
-        match move_type {
-            Move::Up => {
-                self.camera_pos =
-                    &self.camera_pos + &math::Vec3::mul(&self.camera_front, self.movement_speed);
-            }
-            Move::Down => {
-                self.camera_pos =
-                    &self.camera_pos - &math::Vec3::mul(&self.camera_front, self.movement_speed);
-            }
-            Move::Left => {
-                self.camera_pos = &self.camera_pos
-                    - &math::Vec3::mul(
-                        &(math::Vec3::cross(&self.camera_front, &self.camera_up).normalize()),
-                        self.movement_speed,
-                    );
-            }
-            Move::Right => {
-                self.camera_pos = &self.camera_pos
-                    + &math::Vec3::mul(
-                        &(math::Vec3::cross(&self.camera_front, &self.camera_up).normalize()),
-                        self.movement_speed,
-                    );
-            }
+        if camera_move == Move::Down {
+            self.Position += -(self.Front * velocity);
         }
-
-        self.movement_speed = movement_speed_cached;
+        if camera_move == Move::Left {
+            self.Position += -(self.Right * velocity);
+        }
+        if camera_move == Move::Right {
+            self.Position += self.Right * velocity;
+        }
     }
 
     pub fn look_around(&mut self, x: f64, y: f64) {
-        if self.helper.first_time_looking_around_flag {
-            self.last_x = x as f32;
-            self.last_y = y as f32;
-            self.helper.first_time_looking_around_flag = false;
-        }
-        let mut x_offset = self.last_x - x as f32;
-        let mut y_offset = y as f32 - self.last_y;
-
-        self.last_x = x as f32;
-        self.last_y = y as f32;
-
-        x_offset *= self.sens;
-        y_offset *= self.sens;
-
-        self.yaw += x_offset;
-        self.pitch += y_offset;
-
-        if self.pitch > 89.0 {
-            self.pitch = 89.0;
-        }
-        if self.pitch < -89.0 {
-            self.pitch = -89.0;
+        let (xpos, ypos) = (x as f32, y as f32);
+        if self.first_mouse_movement {
+            self.last_x = xpos;
+            self.last_y = ypos;
+            self.first_mouse_movement = false;
         }
 
-        let mut dir = math::Vec3::new(0.0, 0.0, 0.0);
-        dir.x = (math::rad(self.yaw)).cos() * (math::rad(self.pitch)).cos();
-        dir.y = (math::rad(self.pitch)).sin();
-        dir.z = (math::rad(self.yaw)).sin() * (math::rad(self.pitch)).cos();
-        self.camera_front = dir.normalize();
+        let mut xoffset = xpos - self.last_x;
+        let mut yoffset = self.last_y - ypos;
+
+        self.last_x = xpos;
+        self.last_y = ypos;
+
+        xoffset *= self.MouseSensitivity;
+        yoffset *= self.MouseSensitivity;
+
+        self.Yaw += xoffset;
+        self.Pitch += yoffset;
+
+        // Make sure that when pitch is out of bounds, screen doesn't get flipped
+        if self.Pitch > 89.0 {
+            self.Pitch = 89.0;
+        }
+        if self.Pitch < -89.0 {
+            self.Pitch = -89.0;
+        }
+
+        // Update Front, Right and Up Vectors using the updated Eular angles
+        self.updateCameraVectors();
     }
 
-    pub fn zoom(&mut self, scroll_value: f64) {
-        self.fov -= scroll_value as f32;
-        if self.fov < 1.0 {
-            self.fov = 1.0;
+    // Processes input received from a mouse scroll-wheel event. Only requires input on the vertical wheel-axis
+    pub fn zoom(&mut self, yoffset: f32) {
+        if self.Zoom >= 1.0 && self.Zoom <= 45.0 {
+            self.Zoom -= yoffset;
         }
-        if self.fov > 45.0 {
-            self.fov = 45.0;
+        if self.Zoom <= 1.0 {
+            self.Zoom = 1.0;
         }
+        if self.Zoom >= 45.0 {
+            self.Zoom = 45.0;
+        }
+    }
 
-        self.proj_mat = perspective(Deg(self.fov), 800.0 / 600.0, 0.1, 100.0);
+    /// Calculates the front vector from the Camera's (updated) Eular Angles
+    fn updateCameraVectors(&mut self) {
+        // Calculate the new Front vector
+        let front = Vector3 {
+            x: self.Yaw.to_radians().cos() * self.Pitch.to_radians().cos(),
+            y: self.Pitch.to_radians().sin(),
+            z: self.Yaw.to_radians().sin() * self.Pitch.to_radians().cos(),
+        };
+        self.Front = front.normalize();
+        // Also re-calculate the Right and Up vector
+        self.Right = self.Front.cross(self.WorldUp).normalize(); // Normalize the vectors, because their length gets closer to 0 the more you look up or down which results in slower movement.
+        self.Up = self.Right.cross(self.Front).normalize();
     }
 }

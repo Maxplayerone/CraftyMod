@@ -4,6 +4,7 @@ use std::os::raw::c_void;
 #[derive(PartialEq, Eq)]
 pub enum VertexArrayConfiguration {
     XyzAndTexCoords,
+    XyAndColour,
 }
 
 pub struct VertexArray {
@@ -50,6 +51,27 @@ impl VertexArray {
                     gl::FALSE,
                     (5 * std::mem::size_of::<GLfloat>()) as GLint,
                     (3 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                );
+                gl::EnableVertexAttribArray(1);
+            } else if configuration == VertexArrayConfiguration::XyAndColour {
+                self.bind();
+                gl::VertexAttribPointer(
+                    0,
+                    2,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (5 * std::mem::size_of::<GLfloat>()) as GLint,
+                    (0 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                );
+                gl::EnableVertexAttribArray(0);
+
+                gl::VertexAttribPointer(
+                    1,
+                    3,
+                    gl::FLOAT,
+                    gl::FALSE,
+                    (5 * std::mem::size_of::<GLfloat>()) as GLint,
+                    (2 * std::mem::size_of::<GLfloat>()) as *const c_void,
                 );
                 gl::EnableVertexAttribArray(1);
             }
