@@ -2,8 +2,8 @@ use crate::renderer::shader::{Shader, ShaderError};
 use gl::types::*;
 use std::ffi::CStr;
 
-use cgmath::Matrix4;
 use cgmath::Matrix;
+use cgmath::Matrix4;
 
 pub struct ShaderProgram {
     pub id: GLuint,
@@ -68,7 +68,12 @@ impl ShaderProgram {
         gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
     }
 
-    pub unsafe fn setMat4(&self, name: &CStr, mat: &Matrix4<f32>) {
-        gl::UniformMatrix4fv(gl::GetUniformLocation(self.id, name.as_ptr()), 1, gl::FALSE, mat.as_ptr());
+    pub unsafe fn set_mat4(&self, name: &CStr, mat: &Matrix4<f32>) {
+        gl::UniformMatrix4fv(
+            gl::GetUniformLocation(self.id, name.as_ptr()),
+            1,
+            gl::FALSE,
+            mat.as_ptr(),
+        );
     }
 }

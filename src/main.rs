@@ -28,14 +28,18 @@ fn main() {
     let mut renderer = Renderer::new().expect("Cannot create renderer");
 
     renderer.load_cubes(
-        math::Vec3::new(-2.0, -2.0, -2.0),
-        math::Vec3::new(3.0, 3.0, 3.0),
+        math::Vec3::new(0.0, 0.0, 0.0),
+        math::Vec3::new(16.0, 16.0, 16.0),
     );
 
     renderer.load_crosshair();
 
     let mut delta_time: f64 = 0.01;
     let mut last_frame: f64 = 0.0;
+
+    unsafe{
+    //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+    }
     while !window.should_close() {
         process_input(&mut window, &mut renderer, delta_time);
         process_events(&events, &mut renderer, delta_time);
@@ -47,6 +51,7 @@ fn main() {
         let current_frame: f64 = glfw::Glfw::get_time(&glfw);
         delta_time = current_frame - last_frame;
         last_frame = current_frame;
+
         window.swap_buffers();
         glfw.poll_events();
     }

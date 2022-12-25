@@ -15,7 +15,6 @@ use crate::utils::math;
 use gl::types::*;
 use std::os::raw::c_void;
 
-use cgmath::prelude::*;
 use cgmath::{perspective, Deg, Matrix4, Point3, Vector3};
 
 //convert literals to c strings without any runtime overhead
@@ -58,11 +57,7 @@ impl Renderer {
 
             program.set_int(c_str!("tex0"), 0);
 
-            //let camera = Camera::new(&program);
-            let camera = Camera {
-                Position: Point3::new(0.0, 0.0, 3.0),
-                ..Camera::default()
-            };
+            let camera = Camera::new();
 
             let mut model = math::Mat4::new(1.0);
             model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
@@ -111,10 +106,10 @@ impl Renderer {
 
     pub fn process_input(&mut self, window: &glfw::Window, delta_time: f64) {
         if glfw::Window::get_key(window, glfw::Key::W) == glfw::Action::Press {
-            self.camera.translate(Move::Up, delta_time as f32);
+            self.camera.translate(Move::Forward, delta_time as f32);
         }
         if glfw::Window::get_key(window, glfw::Key::S) == glfw::Action::Press {
-            self.camera.translate(Move::Down, delta_time as f32);
+            self.camera.translate(Move::Backward, delta_time as f32);
         }
         if glfw::Window::get_key(window, glfw::Key::A) == glfw::Action::Press {
             self.camera.translate(Move::Left, delta_time as f32);
@@ -149,14 +144,12 @@ impl Renderer {
         let mut offset_y = 0.0;
         let mut offset_z = 0.0;
         let mut i = 0;
+        let mut j = 0;
 
         let mut vertices: Vec<f32> = Vec::with_capacity((120 * self.cube_count) as usize);
         let size = self.cube_size;
         for _ in 0..self.cube_count {
-            println!("offset x {}", offset_x);
-            println!("offset y {}", offset_y);
-            println!("offset z {}", offset_z);
-            println!("----------------------------");
+
             //back-face
             vertices.push(starting_pos.x + offset_x); //left-bottom-back
             vertices.push(starting_pos.y + offset_y);
@@ -289,14 +282,16 @@ impl Renderer {
             if i % width == 0 {
                 offset_x = 0.0;
                 offset_z += 1.0;
+                j += 1;
             }
-            /*
-            if i % width * height == 0 {
-                offset_x = 0.0;
-                offset_y = 0.0;
-                offset_y += 1.0;
+            if j > 0 {
+                if j % depth == 0 {
+                    offset_x = 0.0;
+                    offset_z = 0.0;
+                    offset_y += 1.0;
+                    j = 0;
+                }
             }
-            */
         }
 
         let mut indices: Vec<u32> = Vec::with_capacity((36 * self.cube_count) as usize);
@@ -362,12 +357,13 @@ impl Renderer {
             self.tex.bind();
             self.program.bind();
 
-            let projection: Matrix4<f32> = perspective(Deg(self.camera.Zoom), (800.0 / 600.0) as f32, 0.1, 100.0);
-            self.program.setMat4(c_str!("projection"), &projection);
+            let projection: Matrix4<f32> =
+                perspective(Deg(self.camera.fov), (800.0 / 600.0) as f32, 0.1, 100.0);
+            self.program.set_mat4(c_str!("projection"), &projection);
 
             // camera/view transformation
             let view = self.camera.GetViewMatrix();
-            self.program.setMat4(c_str!("view"), &view);
+            self.program.set_mat4(c_str!("view"), &view);
 
             self.vao.bind();
             gl::DrawElements(

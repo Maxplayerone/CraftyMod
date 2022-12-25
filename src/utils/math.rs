@@ -1,5 +1,7 @@
 use std::f32::consts::PI;
 use std::ops::Add;
+use std::ops::AddAssign;
+use std::ops::Neg;
 use std::ops::Sub;
 
 pub fn rad(angle_degrees: f32) -> f32 {
@@ -33,6 +35,28 @@ impl Add for &Vec3 {
             x: self.x + other.x,
             y: self.y + other.y,
             z: self.z + other.z,
+        }
+    }
+}
+
+impl AddAssign for Vec3 {
+    fn add_assign(&mut self, other: Self) {
+        *self = Self {
+            x: self.x + other.x,
+            y: self.y + other.y,
+            z: self.z + other.z,
+        };
+    }
+}
+
+impl Neg for Vec3 {
+    type Output = Self;
+
+    fn neg(self) -> Self {
+        Self {
+            x: self.x * -1.0,
+            y: self.y * -1.0,
+            z: self.z * -1.0,
         }
     }
 }
