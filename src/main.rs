@@ -7,9 +7,14 @@ extern crate gl;
 mod renderer;
 mod utils;
 use crate::renderer::Renderer;
-use crate::utils::math;
+//use crate::utils::math;
+
+//use opensimplex_noise_rs::OpenSimplexNoise;
 
 fn main() {
+    //let noise_generator = OpenSimplexNoise::new(Some(883_279_212_983_182_319));
+    //let scale = 0.044;
+
     let mut glfw = glfw::init(glfw::FAIL_ON_ERRORS).unwrap();
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
@@ -27,26 +32,19 @@ fn main() {
 
     let mut renderer = Renderer::new().expect("Cannot create renderer");
 
-    renderer.load_cubes(
-        math::Vec3::new(0.0, 0.0, 0.0),
-        math::Vec3::new(16.0, 16.0, 16.0),
-    );
-
-    renderer.load_crosshair();
-
     let mut delta_time: f64 = 0.01;
     let mut last_frame: f64 = 0.0;
 
-    unsafe{
-    //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+    unsafe {
+        //gl::PolygonMode(gl::FRONT_AND_BACK, gl::LINE);
+        gl::Enable(gl::CULL_FACE);
     }
     while !window.should_close() {
         process_input(&mut window, &mut renderer, delta_time);
-        process_events(&events, &mut renderer, delta_time);
+        process_events(&events, &mut renderer);
 
         renderer.clear_screen();
-        //renderer.draw_crosshair();
-        renderer.draw_cubes();
+        renderer.draw();
 
         let current_frame: f64 = glfw::Glfw::get_time(&glfw);
         delta_time = current_frame - last_frame;
@@ -61,22 +59,18 @@ fn process_input(window: &mut glfw::Window, renderer: &mut Renderer, delta_time:
     if window.get_key(glfw::Key::Escape) == glfw::Action::Press {
         window.set_should_close(true)
     } else {
-        renderer.process_input(&window, delta_time);
+        renderer.process_input(window, delta_time);
     }
 }
 
-fn process_events(
-    events: &Receiver<(f64, glfw::WindowEvent)>,
-    renderer: &mut Renderer,
-    delta_time: f64,
-) {
+fn process_events(events: &Receiver<(f64, glfw::WindowEvent)>, renderer: &mut Renderer) {
     for (_, event) in glfw::flush_messages(events) {
         match event {
             glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
                 gl::Viewport(0, 0, width, height)
             },
             _ => {
-                renderer.process_events(event, delta_time);
+                renderer.process_events(event);
             }
         }
     }

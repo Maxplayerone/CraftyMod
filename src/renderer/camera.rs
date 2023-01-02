@@ -1,7 +1,3 @@
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
-
-use cgmath;
 use cgmath::prelude::*;
 use cgmath::vec3;
 
@@ -9,7 +5,9 @@ type Point3 = cgmath::Point3<f32>;
 type Vector3 = cgmath::Vector3<f32>;
 type Matrix4 = cgmath::Matrix4<f32>;
 
-#[derive(PartialEq)]
+use crate::utils::math;
+
+#[derive(PartialEq, Eq)]
 pub enum Move {
     Forward,
     Backward,
@@ -38,9 +36,9 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new() -> Self {
+    pub fn new(pos: math::Vec3) -> Self {
         let mut camera = Camera {
-            position: Point3::new(0.0, 0.0, 0.0),
+            position: Point3::new(pos.x, pos.y, pos.z),
             camera_front: vec3(0.0, 0.0, -1.0),
             camera_up: Vector3::zero(),
             camera_right: Vector3::zero(),
@@ -54,11 +52,11 @@ impl Camera {
             last_x: 400.0,
             last_y: 300.0,
         };
-        camera.updateCameraVectors();
+        camera.update_camera_vectors();
         camera
     }
 
-    pub fn GetViewMatrix(&self) -> Matrix4 {
+    pub fn get_view_matrix(&self) -> Matrix4 {
         Matrix4::look_at(
             self.position,
             self.position + self.camera_front,
@@ -66,8 +64,8 @@ impl Camera {
         )
     }
 
-    pub fn translate(&mut self, camera_move: Move, deltaTime: f32) {
-        let velocity = self.movement_speed * deltaTime;
+    pub fn translate(&mut self, camera_move: Move, delta_time: f32) {
+        let velocity = self.movement_speed * delta_time;
         if camera_move == Move::Forward {
             self.position += self.camera_front * velocity;
         }
@@ -109,7 +107,7 @@ impl Camera {
             self.pitch = -89.0;
         }
 
-        self.updateCameraVectors();
+        self.update_camera_vectors();
     }
 
     pub fn zoom(&mut self, yoffset: f32) {
@@ -124,7 +122,7 @@ impl Camera {
         }
     }
 
-    fn updateCameraVectors(&mut self) {
+    fn update_camera_vectors(&mut self) {
         let front = Vector3 {
             x: self.yaw.to_radians().cos() * self.pitch.to_radians().cos(),
             y: self.pitch.to_radians().sin(),

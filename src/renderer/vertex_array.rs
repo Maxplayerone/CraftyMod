@@ -40,7 +40,7 @@ impl VertexArray {
                     gl::FLOAT,
                     gl::FALSE,
                     (5 * std::mem::size_of::<GLfloat>()) as GLint,
-                    (0 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                    std::ptr::null::<c_void>(),
                 );
                 gl::EnableVertexAttribArray(0);
 
@@ -61,7 +61,7 @@ impl VertexArray {
                     gl::FLOAT,
                     gl::FALSE,
                     (5 * std::mem::size_of::<GLfloat>()) as GLint,
-                    (0 * std::mem::size_of::<GLfloat>()) as *const c_void,
+                    std::ptr::null::<c_void>(),
                 );
                 gl::EnableVertexAttribArray(0);
 

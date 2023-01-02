@@ -105,13 +105,13 @@ impl Mat4 {
             ],
         }
     }
-
-    pub fn translate(&mut self, vec: Vec3) {
-        self.mat[12] = vec.x;
-        self.mat[13] = vec.y;
-        self.mat[14] = vec.z;
-    }
-
+    /*
+        pub fn translate(&mut self, vec: Vec3) {
+            self.mat[12] = vec.x;
+            self.mat[13] = vec.y;
+            self.mat[14] = vec.z;
+        }
+    */
     pub fn rotate(&mut self, axis_normalized: Vec3, angle_degrees: f32) {
         let angle_radians = rad(angle_degrees);
         let s = angle_radians.sin();
@@ -131,6 +131,7 @@ impl Mat4 {
         self.mat[10] = one_minus_c * axis_normalized.z * axis_normalized.z + c;
     }
 
+    /*
     pub fn look_at(&mut self, pos: &Vec3, target: &Vec3, world_up: &Vec3) {
         let dir = (pos - target).normalize();
         let right = Vec3::cross(world_up, &dir).normalize();
@@ -151,7 +152,7 @@ impl Mat4 {
         self.mat[13] = -pos.y;
         self.mat[14] = -pos.z;
     }
-
+    */
     /*
     pub fn perspective(&mut self, fov: f32, aspect_ratio: f32, near: f32, far: f32){
         //asserts
