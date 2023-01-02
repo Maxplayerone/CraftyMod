@@ -35,20 +35,17 @@ impl Renderer {
             let fragment_shader = Shader::new("src/shaders/basic.frag", gl::FRAGMENT_SHADER)?;
             let program = ShaderProgram::new(&[vertex_shader, fragment_shader])?;
 
-            let tex = Texture::new(Path::new("src/resources/stone.png"));
+            let tex = Texture::new(Path::new("src/resources/test_grass.png"));
 
             program.set_int(c_str!("tex0"), 0);
 
-            let camera = Camera::new(math::Vec3::new(0.0, 1.0, 5.0));
+            let camera = Camera::new(math::Vec3::new(-10.0, 16.0, 11.0));
 
-            let mut model = math::Mat4::new(1.0);
-            model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
+            let model = math::Mat4::new(1.0);
+            //model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
 
             let model_loc = gl::GetUniformLocation(program.id, c_str!("model").as_ptr());
             gl::UniformMatrix4fv(model_loc, 1, gl::FALSE, &model.mat[0]);
-
-            let mut model = math::Mat4::new(1.0);
-            model.rotate(math::Vec3::new(0.5, 1.0, 0.0).normalize(), 32.0);
 
             let mut chunk = Chunk::new();
             chunk.load_cubes(math::Vec3::new(0.0, 0.0, 0.0));

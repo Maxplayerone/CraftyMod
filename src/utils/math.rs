@@ -8,7 +8,7 @@ pub fn rad(angle_degrees: f32) -> f32 {
     angle_degrees * (PI / 180.0)
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
